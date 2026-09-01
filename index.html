@@ -192,6 +192,9 @@ var KEY = "photo-exam-v1";
 var KEY_SESSION = "photo-exam-session-v1";
 var store = load();
 if(!store.seen) store.seen = {};
+if(!store.imported) store.imported = {};
+// 가져온 문항도 문제은행과 똑같이 다룰 수 있게 목록에 얹는다
+Object.keys(store.imported).forEach(function(id){ BY_ID[id] = store.imported[id]; });
 function load(){
   try{
     var raw = localStorage.getItem(KEY);
@@ -284,10 +287,12 @@ function download(name, text){
   saveViaLink(name, body);
 }
 function subjectName(n){
+  if(!n) return "가져온 문항";
   var s = DATA.subjects.filter(function(x){ return x.no===n; })[0];
   return s ? s.no+"과목 "+s.name : n+"과목";
 }
 function chapterName(n){
+  if(!n) return "가져온 문항";
   var c = (DATA.chapters||[]).filter(function(x){ return x.no===n; })[0];
   return c ? c.no+"장 "+c.name : n+"장";
 }
@@ -409,6 +414,7 @@ function home(){
      + '<div class="note">오답노트에 <b>'+wrongCount+'문항</b>이 쌓여 있습니다. 많이 틀린 문제부터 나오고, 맞히면 목록에서 빠집니다</div></div>'
      + '<div class="row"><button id="btn-review" '+(wrongCount?'':'disabled')+'>오답만 풀기</button>'
      + '<button id="btn-notes">오답노트</button>'
+     + '<button id="btn-import">.md 불러오기</button>'
      + '<button id="btn-stats">성적과 취약분야</button></div></section>';
 
   if(mocks.length){
@@ -444,6 +450,7 @@ function home(){
   };
   el("btn-review").onclick = startReview;
   el("btn-notes").onclick = notes;
+  el("btn-import").onclick = pickMarkdownFile;
   el("btn-stats").onclick = stats;
 }
 
@@ -729,9 +736,13 @@ function notes(){
   });
   var h = '<header class="spread"><div class="stack"><div class="eyebrow">'+ids.length+'문항</div>'
         + '<h1>오답노트</h1></div><div class="row">'
-        + '<button id="btn-export">내보내기(.md)</button><button id="btn-home">처음으로</button></div></header>';
+        + '<button id="btn-import">불러오기(.md)</button>'
+        + '<button id="btn-export">내보내기(.md)</button>'
+        + '<button id="btn-home">처음으로</button></div></header>';
   h += '<div class="note">오답 다시 풀기에서 맞히면 목록에서 자동으로 빠집니다. '
-     + '메모는 이 브라우저에 저장됩니다.</div>';
+     + '메모는 이 브라우저에 저장됩니다.<br>'
+     + '내보낸 오답노트나 문제집 마크다운 파일을 <b>불러오기</b> 로 넣으면 '
+     + '여기에서 보고 그대로 다시 풀 수 있습니다.</div>';
   if(!ids.length){
     h += '<section class="card"><div class="note">아직 틀린 문제가 없습니다.</div></section>';
   }
@@ -754,11 +765,17 @@ function notes(){
   el("app").innerHTML = h;
   el("btn-home").onclick = home;
   el("btn-export").onclick = function(){ exportNotes(ids); };
+  el("btn-import").onclick = pickMarkdownFile;
   Array.prototype.forEach.call(document.querySelectorAll("[data-note]"), function(t){
     t.onchange = function(){ store.wrong[t.dataset.note].note = t.value; save(); };
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-del]"), function(b){
-    b.onclick = function(){ delete store.wrong[b.dataset.del]; save(); notes(); };
+    b.onclick = function(){
+      var id = b.dataset.del;
+      delete store.wrong[id];
+      if(store.imported[id]){ delete store.imported[id]; delete BY_ID[id]; }
+      save(); notes();
+    };
   });
 }
 
@@ -785,6 +802,123 @@ function exportNotes(ids){
     });
   });
   download("사진기능사_오답노트.md", out.join("\n"));
+}
+
+/* ---------- 마크다운 불러오기 ---------- */
+var CIRCLE_RE = /^[-*]\s*([①②③④]|[1-4][.)])\s*(.+)$/;
+
+function parseMarkdown(text){
+  // 내보낸 오답노트와 저장소의 단원별 문제집(.md) 두 형식을 모두 읽는다
+  var blocks = text.split(/^###\s+/m).slice(1);
+  var out = [];
+  blocks.forEach(function(block){
+    var lines = block.split(/\r?\n/);
+    var head = (lines.shift() || "").trim();
+    var topic = "", chapter = 0;
+
+    var meta = head.match(/^\[([^\]]+)\]\s*(.*)$/);   // [4장 사진장비 및 관리 · 안전·환경] 문제
+    if(meta){
+      var tags = meta[1].split("·");
+      var chMatch = (tags[0]||"").match(/(\d+)\s*장/);
+      if(chMatch) chapter = parseInt(chMatch[1], 10);
+      topic = (tags[1] || "").trim();
+      head = meta[2].trim();
+    }
+    head = head.replace(/^\d+\.\s*/, "");             // "1. 문제" 형태의 번호 제거
+
+    var choices = [], answer = 0, exp = "", note = "", count = 0, id = "";
+    var afterAnswerLine = false;
+
+    lines.forEach(function(raw){
+      var line = raw.trim();
+      if(!line) return;
+
+      var c = line.match(CIRCLE_RE);
+      if(c && choices.length < 4){
+        var body = c[2];
+        if(/←\s*\*{0,2}정답/.test(body) || /\*\*정답\*\*/.test(body)){
+          answer = choices.length + 1;
+        }
+        choices.push(body.replace(/\s*\*{0,2}←?\s*\*{0,2}정답\*{0,2}\s*$/, "").trim());
+        return;
+      }
+      var a = line.match(/\*\*정답\s*([①②③④])\*\*/);   // **정답 ④** 형식
+      if(a){
+        answer = "①②③④".indexOf(a[1]) + 1;
+        var t = line.match(/분야:\s*([^·\s][^·]*)/);
+        if(t && !topic) topic = t[1].trim();
+        var ch2 = line.match(/(\d+)\s*장/);
+        if(ch2 && !chapter) chapter = parseInt(ch2[1], 10);
+        var i2 = line.match(/문항번호:\s*([A-Za-z0-9_-]+)/);
+        if(i2) id = i2[1];
+        afterAnswerLine = true;
+        return;
+      }
+      if(line.indexOf("> ") === 0){ exp = (exp ? exp + " " : "") + line.slice(2).trim(); return; }
+      var m;
+      if((m = line.match(/^[-*]\s*문항번호:\s*(.+)$/))){ id = m[1].trim(); return; }
+      if((m = line.match(/^[-*]\s*내\s*메모:\s*(.*)$/))){ note = m[1].trim(); return; }
+      if((m = line.match(/^[-*]\s*틀린\s*횟수:\s*(\d+)/))){ count = parseInt(m[1], 10); return; }
+      if(line === "</details>" || line.indexOf("<details") === 0 || line.indexOf("</summary>") >= 0) return;
+      if(afterAnswerLine && !exp && line.indexOf("**") !== 0){ exp = line; }
+    });
+
+    if(head && choices.length === 4 && answer >= 1){
+      out.push({id:id, q:head, c:choices, a:answer, e:exp || "해설이 없는 문항입니다.",
+                topic: topic || "가져온 문항", chapter: chapter, note:note, count:count});
+    }
+  });
+  return out;
+}
+
+function importMarkdown(text, filename){
+  var parsed = parseMarkdown(text);
+  if(!parsed.length){
+    tell("읽을 수 있는 문항이 없습니다",
+         "오답노트 내보내기로 만든 .md 파일이나, 저장소의 단원별 문제집 .md 파일을 넣어 주세요.");
+    return;
+  }
+  var known = 0, added = 0, seq = 1;
+  parsed.forEach(function(q){
+    var id = q.id;
+    if(id && BY_ID[id]){
+      known++;                                   // 문제은행에 이미 있는 문항
+    }else{
+      if(!id || BY_ID[id]){                      // 번호가 없거나 겹치면 새로 붙인다
+        while(BY_ID["IMP-" + seq]) seq++;
+        id = "IMP-" + seq;
+      }
+      var item = {id:id, q:q.q, c:q.c, a:q.a, e:q.e, topic:q.topic, s:0, ch:q.chapter || 0};
+      store.imported[id] = item;
+      BY_ID[id] = item;
+      added++;
+    }
+    var w = store.wrong[id] || {count:0, note:""};
+    w.count = Math.max(w.count, q.count || 1);
+    if(q.note) w.note = q.note;
+    w.last = w.last || today();
+    store.wrong[id] = w;
+  });
+  save();
+  tell("불러왔습니다",
+       esc(filename) + "<br>모두 " + parsed.length + "문항 · 문제은행에 있던 문항 " + known
+       + "개, 새로 추가된 문항 " + added + "개<br>오답노트에 담았으니 바로 다시 풀 수 있습니다.",
+       notes);
+}
+
+function pickMarkdownFile(){
+  var input = document.createElement("input");
+  input.type = "file";
+  input.accept = ".md,.markdown,.txt,text/markdown,text/plain";
+  input.onchange = function(){
+    var f = input.files && input.files[0];
+    if(!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){ importMarkdown(String(reader.result || ""), f.name); };
+    reader.onerror = function(){ tell("파일을 읽지 못했습니다", "다른 파일로 다시 시도해 주세요."); };
+    reader.readAsText(f, "utf-8");
+  };
+  input.click();
 }
 
 /* ---------- 성적과 취약분야 ---------- */
@@ -838,7 +972,8 @@ function stats(){
       body: "오답노트, 점수 기록, 풀어 본 문항 표시가 전부 사라집니다. 되돌릴 수 없습니다.",
       actions: [
         {label:"모두 지우기", primary:true, act:function(){
-          store = {wrong:{}, history:[], topic:{}, seen:{}};
+          Object.keys(store.imported).forEach(function(id){ delete BY_ID[id]; });
+          store = {wrong:{}, history:[], topic:{}, seen:{}, imported:{}};
           save(); clearSession(); stats();
         }},
         {label:"취소"}
