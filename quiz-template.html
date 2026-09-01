@@ -1,0 +1,854 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>사진기능사 문제은행</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+KR:wght@400;500;700&family=Noto+Serif+KR:wght@600;700&display=swap">
+<style>
+/* 밝은 테마가 기준값. 다크는 토큰만 다시 정의한다. */
+:root{
+  --ground:#f1f1ef;        /* 18% 그레이카드에서 온 중립 무채색 */
+  --surface:#fbfbfa;
+  --raised:#ffffff;
+  --line:#d9dad6;
+  --line-soft:#e7e8e4;
+  --ink:#1a1c1d;
+  --ink-dim:#63676b;
+  --accent:#0e6f7d;        /* 딥 시안 */
+  --accent-ink:#ffffff;
+  --accent-soft:#dceef1;
+  --mark:#a8650a;          /* 그리스펜슬 앰버 - 나중에 다시 볼 표시 */
+  --mark-soft:#f6ecda;
+  --ok:#1c7a4d;
+  --ok-soft:#dcefe4;
+  --bad:#bb392c;
+  --bad-soft:#f7e3e1;
+  --shadow:0 1px 2px rgba(20,22,24,.06);
+  --sans:"Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --serif:"Noto Serif KR","Apple SD Gothic Neo",Georgia,serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#16181a;
+    --surface:#1d2022;
+    --raised:#23262a;
+    --line:#33383c;
+    --line-soft:#2a2e31;
+    --ink:#e7e8e6;
+    --ink-dim:#9aa0a4;
+    --accent:#4fb3c4;
+    --accent-ink:#0d1416;
+    --accent-soft:#123037;
+    --mark:#dda249;
+    --mark-soft:#332a17;
+    --ok:#5cc08c;
+    --ok-soft:#16301f;
+    --bad:#f08376;
+    --bad-soft:#37201c;
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#16181a; --surface:#1d2022; --raised:#23262a;
+  --line:#33383c; --line-soft:#2a2e31;
+  --ink:#e7e8e6; --ink-dim:#9aa0a4;
+  --accent:#4fb3c4; --accent-ink:#0d1416; --accent-soft:#123037;
+  --mark:#dda249; --mark-soft:#332a17;
+  --ok:#5cc08c; --ok-soft:#16301f;
+  --bad:#f08376; --bad-soft:#37201c;
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--ground);color:var(--ink);
+  font-family:var(--sans);font-size:16px;line-height:1.7;
+}
+.wrap{max-width:760px;margin:0 auto;padding:22px 18px 72px;display:flex;flex-direction:column;gap:16px}
+
+/* 타이포 */
+h1{font-family:var(--serif);font-weight:700;font-size:26px;line-height:1.35;margin:0;text-wrap:balance}
+h2{font-family:var(--serif);font-weight:600;font-size:18px;margin:0;text-wrap:balance}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+.note{color:var(--ink-dim);font-size:14px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* 골격 */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:18px;
+  box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.spread{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.stack{display:flex;flex-direction:column;gap:4px}
+
+/* 컨트롤 */
+button{font:inherit;font-family:var(--sans);cursor:pointer;border-radius:4px;
+  border:1px solid var(--line);background:var(--raised);color:var(--ink);padding:8px 14px;
+  transition:border-color .12s,background .12s}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:500}
+button.primary:hover{filter:brightness(1.08)}
+button:disabled{opacity:.42;cursor:default}
+button:disabled:hover{border-color:var(--line)}
+select{font:inherit;font-family:var(--sans);padding:8px 10px;border-radius:4px;
+  border:1px solid var(--line);background:var(--raised);color:var(--ink)}
+textarea{width:100%;font:inherit;font-family:var(--sans);font-size:14px;padding:9px 10px;
+  border-radius:4px;border:1px solid var(--line);background:var(--ground);color:var(--ink);resize:vertical}
+textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.tag{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--ink-dim);
+  border:1px solid var(--line);border-radius:3px;padding:1px 7px;white-space:nowrap;background:var(--raised)}
+.tag.now{color:var(--accent);border-color:var(--accent)}
+
+/* 시험 바 */
+.bar{position:sticky;top:0;z-index:5;background:var(--ground);
+  padding:10px 0 8px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:8px}
+.timer{font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:19px;font-weight:600;
+  letter-spacing:.02em;padding:2px 8px;border:1px solid var(--line);border-radius:3px;background:var(--raised)}
+.timer.hurry{color:var(--bad);border-color:var(--bad)}
+.meter{height:3px;background:var(--line-soft);overflow:hidden;border-radius:2px}
+.meter i{display:block;height:100%;background:var(--accent);transition:width .2s}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+/* 문제 */
+.qtext{font-size:18px;font-weight:500;line-height:1.65;margin:0;white-space:pre-wrap;text-wrap:pretty}
+.choices{display:flex;flex-direction:column;gap:7px}
+.choice{display:flex;gap:11px;align-items:flex-start;width:100%;text-align:left;
+  padding:11px 13px;background:var(--raised);line-height:1.6}
+.choice .num{font-family:var(--mono);font-size:14px;color:var(--ink-dim);flex:0 0 auto;padding-top:1px}
+.choice.sel{border-color:var(--accent);background:var(--accent-soft)}
+.choice.sel .num{color:var(--accent)}
+.choice.right{border-color:var(--ok);background:var(--ok-soft)}
+.choice.right .num{color:var(--ok)}
+.choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
+.choice.wrong .num{color:var(--bad)}
+.exp{border-left:2px solid var(--accent);padding:2px 0 2px 13px;color:var(--ink-dim);font-size:14.5px}
+.exp b{color:var(--ink)}
+
+/* 문항 이동 - 컨택트시트 프레임 */
+.sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px}
+.sheet button{font-family:var(--mono);font-size:12px;padding:7px 0;text-align:center;
+  border-radius:2px;color:var(--ink-dim)}
+.sheet button.done{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+.sheet button.flag{background:var(--mark-soft);border-color:var(--mark);color:var(--mark)}
+.sheet button.now{outline:2px solid var(--ink);outline-offset:1px;color:var(--ink)}
+
+/* 결과 */
+.score{font-family:var(--mono);font-size:44px;font-weight:600;line-height:1.1;letter-spacing:-.02em}
+.pass{color:var(--ok)}
+.fail{color:var(--bad)}
+.verdict{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;
+  padding:2px 8px;border-radius:3px;border:1px solid currentColor}
+.wrongitem{border-top:1px solid var(--line-soft);padding-top:14px;display:flex;flex-direction:column;gap:7px}
+.opt{font-size:15px}
+.opt .num{font-family:var(--mono);font-size:13px;color:var(--ink-dim);margin-right:7px}
+.opt.is-right{color:var(--ok);font-weight:500}
+.opt.is-picked{color:var(--bad)}
+.after{font-family:var(--mono);font-size:11px;letter-spacing:.05em;margin-left:6px}
+
+/* 확인창 - 샌드박스에서 막히는 시스템 창 대신 페이지 안에 그린다 */
+.overlay{position:fixed;inset:0;z-index:50;background:rgba(12,14,16,.55);
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--surface);border:1px solid var(--line);border-radius:6px;
+  padding:20px;width:100%;max-width:430px;display:flex;flex-direction:column;gap:14px;
+  box-shadow:0 10px 34px rgba(0,0,0,.28)}
+.modal .actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end}
+.modal .actions button{flex:1 1 auto;min-width:110px}
+@media (max-width:600px){ .keyhint{display:none} }
+
+/* 표 */
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line-soft);white-space:nowrap}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-dim);font-weight:400}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:none}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<script>window.EXAM_DATA = __EXAM_DATA__;</script>
+<script>
+(function(){
+"use strict";
+
+/* ---------- 데이터 ---------- */
+var DATA = window.EXAM_DATA;
+var ALL = [];
+DATA.subjects.forEach(function(s){ s.questions.forEach(function(q){ ALL.push(q); }); });
+var BY_ID = {};
+ALL.forEach(function(q){ BY_ID[q.id] = q; });
+var CIRCLE = ["①","②","③","④"];
+var PASS_MARK = 60;            // 100점 만점 기준 합격선
+var MOCK_MIN = 60;             // 실전 모의고사 제한시간(분)
+
+/* ---------- 저장소 ---------- */
+var KEY = "photo-exam-v1";
+var KEY_SESSION = "photo-exam-session-v1";
+var store = load();
+if(!store.seen) store.seen = {};
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return {wrong:{}, history:[], topic:{}, seen:{}};
+}
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(store)); }
+  catch(e){ /* 저장이 막힌 환경(사생활 보호 모드 등)에서도 풀이는 계속된다 */ }
+}
+
+/* ---------- 풀던 시험 이어하기 ---------- */
+function saveSession(){
+  if(!session) return;
+  try{
+    localStorage.setItem(KEY_SESSION, JSON.stringify({
+      ids: session.qs.map(function(q){ return q.id; }),
+      ans: session.ans, flag: session.flag, idx: session.idx,
+      mode: session.mode, kind: session.kind, instant: session.instant,
+      limit: session.limit, left: session.left, at: today()
+    }));
+  }catch(e){}
+}
+function loadSaved(){
+  try{
+    var raw = localStorage.getItem(KEY_SESSION);
+    if(!raw) return null;
+    var v = JSON.parse(raw);
+    var qs = (v.ids||[]).map(function(id){ return BY_ID[id]; }).filter(Boolean);
+    if(qs.length !== (v.ids||[]).length || !qs.length) return null;   // 문제은행이 바뀐 경우
+    v.qs = qs;
+    return v;
+  }catch(e){ return null; }
+}
+function clearSession(){
+  try{ localStorage.removeItem(KEY_SESSION); }catch(e){}
+}
+
+/* ---------- 유틸 ---------- */
+function el(id){ return document.getElementById(id); }
+function esc(s){
+  return String(s).replace(/[&<>"]/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];
+  });
+}
+function pickFresh(pool, n){
+  // 적게 나온 문제부터 뽑는다. 회차를 거듭하면 문제은행을 한 바퀴 돌게 된다.
+  var mixed = shuffle(pool);
+  mixed.sort(function(a,b){ return (store.seen[a.id]||0) - (store.seen[b.id]||0); });
+  var taken = (n > 0 && n < mixed.length) ? mixed.slice(0, n) : mixed;
+  return shuffle(taken);
+}
+function shuffle(a){
+  a = a.slice();
+  for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i];a[i]=a[j];a[j]=t; }
+  return a;
+}
+function today(){
+  var d = new Date(), p = function(n){ return (n<10?"0":"")+n; };
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes());
+}
+function mmss(sec){
+  if(sec<0) sec=0;
+  var m=Math.floor(sec/60), s=sec%60;
+  return (m<10?"0":"")+m+":"+(s<10?"0":"")+s;
+}
+function saveViaLink(name, text){
+  var blob = new Blob([text], {type:"text/markdown;charset=utf-8"});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement("a");
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+}
+function download(name, text){
+  // 파일로 열었을 때는 링크로 바로 내려받고,
+  // 웹에 올려 둔 페이지에서는 뷰어에 저장을 요청한다.
+  var body = "﻿" + text;
+  if(window.claude && typeof window.claude.use === "function"){
+    window.claude.use("downloads").then(function(d){
+      if(!d){ saveViaLink(name, body); return; }
+      d.save({filename:name, data:body})["catch"](function(err){
+        if(err && err.code === "declined") return;   // 사용자가 취소한 것은 실패가 아니다
+        saveViaLink(name, body);
+      });
+    }, function(){ saveViaLink(name, body); });
+    return;
+  }
+  saveViaLink(name, body);
+}
+function subjectName(n){
+  var s = DATA.subjects.filter(function(x){ return x.no===n; })[0];
+  return s ? s.no+"과목 "+s.name : n+"과목";
+}
+function chapterName(n){
+  var c = (DATA.chapters||[]).filter(function(x){ return x.no===n; })[0];
+  return c ? c.no+"장 "+c.name : n+"장";
+}
+function chapterQuestions(n){
+  return ALL.filter(function(q){ return q.ch===n; });
+}
+
+function closeModal(){
+  var old = document.querySelector(".overlay");
+  if(old) old.remove();
+}
+function ask(opts){
+  // opts: {title, body, actions:[{label, primary, act}], dismiss}
+  closeModal();
+  var ov = document.createElement("div");
+  ov.className = "overlay";
+  var box = document.createElement("div");
+  box.className = "modal";
+  box.setAttribute("role","dialog");
+  box.setAttribute("aria-modal","true");
+  var h = '<h2>'+esc(opts.title)+'</h2>';
+  if(opts.body) h += '<div class="note">'+opts.body+'</div>';
+  h += '<div class="actions"></div>';
+  box.innerHTML = h;
+  var actions = box.querySelector(".actions");
+  opts.actions.forEach(function(a){
+    var b = document.createElement("button");
+    b.textContent = a.label;
+    if(a.primary) b.className = "primary";
+    b.onclick = function(){ closeModal(); if(a.act) a.act(); };
+    actions.appendChild(b);
+  });
+  ov.appendChild(box);
+  ov.onclick = function(e){ if(e.target === ov && opts.dismiss !== false) closeModal(); };
+  document.body.appendChild(ov);
+  var first = box.querySelector("button");
+  if(first) first.focus();
+}
+function tell(title, body, act){
+  ask({title:title, body:body, dismiss:false,
+       actions:[{label:"확인", primary:true, act:act}]});
+}
+
+var session = null;
+var timerId = null;
+function stopTimer(){ if(timerId){ clearInterval(timerId); timerId = null; } }
+function startTimer(){
+  stopTimer();
+  if(!session.limit) return;
+  timerId = setInterval(function(){
+    session.left--;
+    var t = el("timer");
+    if(t){
+      t.textContent = mmss(session.left);
+      if(session.left <= 300) t.className = "timer hurry";
+    }
+    if(session.left <= 0){
+      stopTimer();
+      tell("시험 시간이 끝났습니다", "지금까지 고른 답으로 채점합니다.", grade);
+    }else if(session.left % 5 === 0){ saveSession(); }
+  }, 1000);
+}
+
+/* ---------- 첫 화면 ---------- */
+function home(){
+  stopTimer(); session = null;
+  var wrongCount = Object.keys(store.wrong).length;
+  var mocks = store.history.filter(function(r){ return r.mode.indexOf("모의고사")>=0; });
+  var saved = loadSaved();
+  var h = "";
+
+  h += '<header class="stack" style="gap:6px">';
+  h += '<div class="eyebrow">필기 예상문제 · 총 '+DATA.total+'문항</div>';
+  h += '<h1>사진기능사 문제은행</h1>';
+  h += '<div class="note">실제 시험은 60문항 60분, 100점 만점에 60점 이상이면 합격입니다. '
+     + '기능사는 과목별 과락이 없어 잘하는 과목으로 메울 수 있습니다.</div></header>';
+
+  if(saved){
+    var savedDone = Object.keys(saved.ans||{}).length;
+    h += '<section class="card"><div class="stack"><h2>풀던 문제가 있습니다</h2>'
+       + '<div class="note">'+esc(saved.mode)+' · '+saved.qs.length+'문항 중 '+savedDone+'문항 풀었음'
+       + (saved.limit ? ' · 남은 시간 '+mmss(saved.left) : '')
+       + '<br>'+esc(saved.at||"")+' 에 저장</div></div>'
+       + '<div class="row"><button class="primary" id="btn-resume">이어서 풀기</button>'
+       + '<button id="btn-drop">지우고 처음부터</button></div></section>';
+  }
+
+  h += '<section class="card"><div class="stack"><h2>실전 모의고사</h2>'
+     + '<div class="note">60문항, 제한시간 '+MOCK_MIN+'분. '
+     + '아직 안 나온 문제부터 뽑으므로 회차를 거듭하면 '+DATA.total+'문항을 다 보게 됩니다</div></div>';
+  h += '<div class="row"><select id="sel-mockmode" aria-label="문항 배분">'
+     + '<option value="exam">실제 시험 배분 · 과목당 20문항</option>'
+     + '<option value="free">전 과목 섞어서 무작위 60문항</option>'
+     + '</select><button class="primary" id="btn-mock">모의고사 시작</button></div></section>';
+
+  h += '<section class="card"><div class="stack"><h2>과목별 연습</h2>'
+     + '<div class="note">답을 고르면 그 자리에서 정답과 해설을 보여 줍니다. 시간 제한 없음</div></div>';
+  h += '<div class="row"><select id="sel-subject" aria-label="과목">';
+  DATA.subjects.forEach(function(s){
+    h += '<option value="'+s.no+'">'+s.no+'과목 '+esc(s.name)+' · '+s.questions.length+'문항</option>';
+  });
+  h += '</select><select id="sel-count" aria-label="문항 수">'
+     + '<option value="10">10문항</option><option value="20" selected>20문항</option>'
+     + '<option value="30">30문항</option><option value="0">전체</option></select>'
+     + '<button id="btn-practice">연습 시작</button></div></section>';
+
+  h += '<section class="card"><div class="stack"><h2>단원별 연습</h2>'
+     + '<div class="note">시중 교재 목차 그대로 8개 단원. 약한 단원만 골라 팔 때 쓰세요</div></div>';
+  h += '<div class="row"><select id="sel-chapter" aria-label="단원">';
+  (DATA.chapters||[]).forEach(function(c){
+    h += '<option value="'+c.no+'">'+c.no+'장 '+esc(c.name)+' · '+chapterQuestions(c.no).length+'문항</option>';
+  });
+  h += '</select><select id="sel-chcount" aria-label="문항 수">'
+     + '<option value="10">10문항</option><option value="20" selected>20문항</option>'
+     + '<option value="0">전체</option></select>'
+     + '<button id="btn-chapter">단원 연습 시작</button></div></section>';
+
+  h += '<section class="card"><div class="stack"><h2>오답 다시 풀기</h2>'
+     + '<div class="note">오답노트에 <b>'+wrongCount+'문항</b>이 쌓여 있습니다. 많이 틀린 문제부터 나오고, 맞히면 목록에서 빠집니다</div></div>'
+     + '<div class="row"><button id="btn-review" '+(wrongCount?'':'disabled')+'>오답만 풀기</button>'
+     + '<button id="btn-notes">오답노트</button>'
+     + '<button id="btn-stats">성적과 취약분야</button></div></section>';
+
+  if(mocks.length){
+    var lastM = mocks[mocks.length-1];
+    var best = Math.max.apply(null, mocks.map(function(r){ return r.score; }));
+    var seenCount = Object.keys(store.seen).length;
+    h += '<section class="card"><div class="stack"><h2>지금까지</h2>'
+       + '<div class="note">모의고사 '+mocks.length+'회 · 최고 '+best+'점 · 최근 '
+       + esc(lastM.date)+' '+lastM.score+'점<br>'
+       + '문제은행 '+DATA.total+'문항 중 '+seenCount+'문항을 풀어 봤습니다</div></div></section>';
+  }
+  el("app").innerHTML = h;
+
+  if(saved){
+    el("btn-resume").onclick = function(){ resume(saved); };
+    el("btn-drop").onclick = function(){
+      ask({
+        title: "풀던 문제를 지울까요?",
+        body: "저장해 둔 " + esc(saved.mode) + " 기록이 사라집니다. 채점되지 않은 답은 성적에 남지 않습니다.",
+        actions: [
+          {label:"지우기", primary:true, act:function(){ clearSession(); home(); }},
+          {label:"취소"}
+        ]
+      });
+    };
+  }
+  el("btn-mock").onclick = function(){ startMock(el("sel-mockmode").value); };
+  el("btn-practice").onclick = function(){
+    startPractice(parseInt(el("sel-subject").value,10), parseInt(el("sel-count").value,10));
+  };
+  el("btn-chapter").onclick = function(){
+    startChapter(parseInt(el("sel-chapter").value,10), parseInt(el("sel-chcount").value,10));
+  };
+  el("btn-review").onclick = startReview;
+  el("btn-notes").onclick = notes;
+  el("btn-stats").onclick = stats;
+}
+
+/* ---------- 세션 ---------- */
+function begin(qs, opts){
+  if(!qs.length){ tell("풀 문제가 없습니다", "먼저 문제를 풀어 오답을 쌓아 보세요."); return; }
+  session = {
+    qs: qs, idx: 0, ans: {}, flag: {},
+    mode: opts.mode, kind: opts.kind || "", instant: !!opts.instant,
+    limit: opts.limit || 0, left: opts.limit || 0
+  };
+  clearSession();
+  startTimer();
+  quiz();
+}
+function resume(saved){
+  session = {
+    qs: saved.qs, idx: saved.idx || 0, ans: saved.ans || {}, flag: saved.flag || {},
+    mode: saved.mode, kind: saved.kind || "", instant: !!saved.instant,
+    limit: saved.limit || 0, left: saved.left || 0
+  };
+  startTimer();
+  quiz();
+}
+
+function startMock(kind){
+  var qs;
+  if(kind === "free"){
+    qs = pickFresh(ALL, 60);                       // 과목 구분 없이 60문항
+  }else{
+    qs = [];
+    DATA.subjects.forEach(function(s){             // 실제 시험처럼 과목당 20문항
+      qs = qs.concat(pickFresh(s.questions, 20));
+    });
+  }
+  begin(qs, {mode:"실전 모의고사", kind: kind || "exam", limit: MOCK_MIN*60});
+}
+function startPractice(no, cnt){
+  var s = DATA.subjects.filter(function(x){ return x.no===no; })[0];
+  begin(pickFresh(s.questions, cnt), {mode: s.no+"과목 연습", instant:true});
+}
+function startChapter(no, cnt){
+  begin(pickFresh(chapterQuestions(no), cnt), {mode: no+"장 연습", instant:true});
+}
+function startReview(){
+  var ids = Object.keys(store.wrong).filter(function(id){ return BY_ID[id]; });
+  ids.sort(function(a,b){ return store.wrong[b].count - store.wrong[a].count; });
+  begin(ids.map(function(id){ return BY_ID[id]; }).slice(0,40), {mode:"오답 다시 풀기", instant:true});
+}
+
+/* ---------- 풀이 화면 ---------- */
+function quiz(){
+  var q = session.qs[session.idx];
+  var picked = session.ans[q.id];
+  var revealed = session.instant && picked !== undefined;
+  var done = Object.keys(session.ans).length;
+  var h = "";
+
+  h += '<div class="bar"><div class="spread" style="align-items:center">';
+  h += '<div class="row"><span class="tag now">'+esc(session.mode)+'</span>';
+  h += '<span class="tag">'+(session.idx+1)+' / '+session.qs.length+'</span>';
+  h += '<span class="tag">'+esc(chapterName(q.ch))+'</span></div>';
+  h += '<div class="row">';
+  if(session.limit) h += '<span class="timer" id="timer">'+mmss(session.left)+'</span>';
+  h += '<button id="btn-submit">채점</button><button id="btn-quit">나가기</button></div>';
+  h += '</div><div class="meter"><i style="width:'+Math.round(done/session.qs.length*100)+'%"></i></div></div>';
+
+  h += '<section class="card">';
+  h += '<div class="spread" style="align-items:center"><span class="tag">'+esc(q.topic)+'</span>';
+  h += '<button id="btn-flag">'+(session.flag[q.id]?"표시 지우기":"나중에 다시 보기")+'</button></div>';
+  h += '<p class="qtext">'+esc(q.q)+'</p>';
+  h += '<div class="choices">';
+  for(var i=0;i<q.c.length;i++){
+    var cls = "choice";
+    if(revealed){
+      if(i === q.a-1) cls += " right";
+      else if(i === picked) cls += " wrong";
+    }else if(picked === i){ cls += " sel"; }
+    h += '<button class="'+cls+'" data-pick="'+i+'"><span class="num">'+CIRCLE[i]+'</span><span>'+esc(q.c[i])+'</span></button>';
+  }
+  h += '</div>';
+  if(revealed){
+    h += '<div class="exp"><b>정답 '+CIRCLE[q.a-1]+'</b><br>'+esc(q.e)+'</div>';
+  }
+  h += '</section>';
+
+  h += '<div class="row">';
+  h += '<button id="btn-prev" '+(session.idx===0?'disabled':'')+'>← 이전</button>';
+  h += '<button id="btn-next" '+(session.idx===session.qs.length-1?'disabled':'')+'>다음 →</button>';
+  h += '<span class="note keyhint">키보드 1~4 로 답 선택, ← → 로 이동</span></div>';
+
+  h += '<section class="card"><div class="stack"><h2>문항 이동</h2>'
+     + '<div class="note">푼 문항은 청록, 표시해 둔 문항은 앰버로 나타납니다</div></div>'
+     + '<div class="sheet" id="nav"></div></section>';
+  el("app").innerHTML = h;
+
+  var out = "";
+  session.qs.forEach(function(qq, i){
+    var c = "";
+    if(session.ans[qq.id] !== undefined) c += " done";
+    if(session.flag[qq.id]) c += " flag";
+    if(i === session.idx) c += " now";
+    out += '<button class="'+c.trim()+'" data-go="'+i+'">'+(i+1)+'</button>';
+  });
+  var nav = el("nav");
+  nav.innerHTML = out;
+  nav.onclick = function(e){
+    var t = e.target.closest("button[data-go]");
+    if(t){ session.idx = parseInt(t.dataset.go,10); quiz(); }
+  };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-pick]"), function(b){
+    b.onclick = function(){ pick(parseInt(b.dataset.pick,10)); };
+  });
+  el("btn-prev").onclick = function(){ if(session.idx>0){ session.idx--; quiz(); } };
+  el("btn-next").onclick = function(){ if(session.idx<session.qs.length-1){ session.idx++; quiz(); } };
+  el("btn-flag").onclick = function(){
+    session.flag[q.id] = !session.flag[q.id]; saveSession(); quiz();
+  };
+  el("btn-submit").onclick = confirmGrade;
+  el("btn-quit").onclick = function(){
+    saveSession();
+    ask({
+      title: "풀던 문제를 어떻게 할까요?",
+      body: "지금까지 " + Object.keys(session.ans).length + "문항을 풀었습니다. "
+          + "저장해 두면 다음에 이 자리에서 이어서 풀 수 있습니다.",
+      actions: [
+        {label:"저장하고 나가기", primary:true, act:function(){ stopTimer(); session = null; home(); }},
+        {label:"지우고 나가기", act:function(){ clearSession(); stopTimer(); session = null; home(); }},
+        {label:"취소"}
+      ]
+    });
+  };
+}
+function pick(i){
+  var q = session.qs[session.idx];
+  if(session.instant && session.ans[q.id] !== undefined) return;  // 해설이 보인 뒤에는 바꾸지 않는다
+  session.ans[q.id] = i;
+  if(!session.instant && session.idx < session.qs.length-1){ session.idx++; }
+  saveSession();
+  quiz();
+}
+document.addEventListener("keydown", function(e){
+  if(!session) return;
+  if(e.key >= "1" && e.key <= "4"){ pick(parseInt(e.key,10)-1); }
+  else if(e.key === "ArrowLeft" && session.idx>0){ session.idx--; quiz(); }
+  else if(e.key === "ArrowRight" && session.idx<session.qs.length-1){ session.idx++; quiz(); }
+});
+function confirmGrade(){
+  var un = session.qs.length - Object.keys(session.ans).length;
+  if(un > 0){
+    ask({
+      title: "아직 "+un+"문항이 남았습니다",
+      body: "고르지 않은 문항은 오답으로 처리됩니다.",
+      actions: [
+        {label:"그래도 채점하기", primary:true, act:grade},
+        {label:"돌아가서 마저 풀기"}
+      ]
+    });
+    return;
+  }
+  grade();
+}
+
+/* ---------- 채점 ---------- */
+function grade(){
+  stopTimer();
+  closeModal();
+  clearSession();
+  var res = [], correct = 0, perSub = {}, perTopic = {};
+  session.qs.forEach(function(q){
+    var picked = session.ans[q.id];
+    var ok = (picked === q.a-1);
+    if(ok) correct++;
+    res.push({q:q, picked:picked, ok:ok});
+
+    perSub[q.s] = perSub[q.s] || {c:0,t:0};
+    perSub[q.s].t++; if(ok) perSub[q.s].c++;
+    perTopic[q.topic] = perTopic[q.topic] || {c:0,t:0};
+    perTopic[q.topic].t++; if(ok) perTopic[q.topic].c++;
+    store.seen[q.id] = (store.seen[q.id]||0) + 1;
+    store.topic[q.topic] = store.topic[q.topic] || {c:0,t:0};
+    store.topic[q.topic].t++; if(ok) store.topic[q.topic].c++;
+
+    if(ok){
+      if(store.wrong[q.id]) delete store.wrong[q.id];   // 맞히면 오답노트에서 뺀다
+    }else{
+      var w = store.wrong[q.id] || {count:0, note:""};
+      w.count++; w.last = today(); w.picked = picked;
+      store.wrong[q.id] = w;
+    }
+  });
+  var score = Math.round(correct / session.qs.length * 100);
+  store.history.push({date: today(), mode: session.mode, score: score,
+    correct: correct, total: session.qs.length});
+  if(store.history.length > 60) store.history = store.history.slice(-60);
+  save();
+  result(res, correct, score, perSub, perTopic);
+}
+
+function result(res, correct, score, perSub, perTopic){
+  var isMock = session.mode.indexOf("모의고사") >= 0;
+  var passed = score >= PASS_MARK;
+  var h = "";
+
+  h += '<section class="card"><div class="spread"><div class="stack">';
+  h += '<div class="eyebrow">'+esc(session.mode)+' 결과</div>';
+  h += '<div class="score '+(passed?"pass":"fail")+'">'+score+'<span style="font-size:20px">점</span></div>';
+  h += '<div class="note">'+session.qs.length+'문항 중 '+correct+'문항 정답</div>';
+  if(isMock){
+    h += '<div style="margin-top:4px"><span class="verdict '+(passed?"pass":"fail")+'">'
+       + (passed ? "합격선 통과" : "합격까지 "+(PASS_MARK-score)+"점")+'</span></div>';
+  }
+  h += '</div><div class="row"><button class="primary" id="btn-again">한 번 더</button>'
+     + '<button id="btn-home">처음으로</button></div></div></section>';
+
+  if(Object.keys(perSub).length > 1){
+    h += '<section class="card"><h2>과목별</h2><div class="tablewrap"><table>'
+       + '<tr><th>과목</th><th class="n">정답</th><th class="n">정답률</th></tr>';
+    Object.keys(perSub).sort().forEach(function(k){
+      var v = perSub[k], p = Math.round(v.c/v.t*100);
+      h += '<tr><td>'+esc(subjectName(parseInt(k,10)))+'</td><td class="n">'+v.c+' / '+v.t+'</td>'
+         + '<td class="n '+(p<60?"fail":(p>=80?"pass":""))+'">'+p+'%</td></tr>';
+    });
+    h += '</table></div></section>';
+  }
+
+  var weak = Object.keys(perTopic).filter(function(k){ return perTopic[k].c < perTopic[k].t; });
+  if(weak.length){
+    weak.sort(function(a,b){ return (perTopic[a].c/perTopic[a].t) - (perTopic[b].c/perTopic[b].t); });
+    h += '<section class="card"><div class="stack"><h2>이번에 약했던 분야</h2>'
+       + '<div class="note">'+weak.slice(0,8).map(function(k){
+             return esc(k)+" "+perTopic[k].c+"/"+perTopic[k].t; }).join("  ·  ")
+       + '</div></div></section>';
+  }
+
+  var wrongs = res.filter(function(r){ return !r.ok; });
+  h += '<section class="card"><div class="spread" style="align-items:center">'
+     + '<h2>틀린 문제 '+wrongs.length+'개</h2>'
+     + '<button id="btn-export">오답노트 내보내기</button></div>';
+  if(!wrongs.length){
+    h += '<div class="note">모두 맞혔습니다.</div>';
+  }else{
+    wrongs.forEach(function(r, n){
+      var q = r.q;
+      h += '<div class="wrongitem"><div class="row">'
+         + '<span class="tag">'+esc(subjectName(q.s))+'</span>'
+         + '<span class="tag">'+esc(chapterName(q.ch))+'</span>'
+         + '<span class="tag">'+esc(q.topic)+'</span></div>';
+      h += '<div style="font-weight:500">'+(n+1)+'. '+esc(q.q)+'</div><div>';
+      for(var i=0;i<q.c.length;i++){
+        var cls = "opt";
+        var after = "";
+        if(i === q.a-1){ cls += " is-right"; after = '<span class="after">정답</span>'; }
+        else if(i === r.picked){ cls += " is-picked"; after = '<span class="after">내가 고른 답</span>'; }
+        h += '<div class="'+cls+'"><span class="num">'+CIRCLE[i]+'</span>'+esc(q.c[i])+after+'</div>';
+      }
+      h += '</div>';
+      if(r.picked === undefined) h += '<div class="note">답을 고르지 않았습니다.</div>';
+      h += '<div class="exp">'+esc(q.e)+'</div></div>';
+    });
+  }
+  h += '</section>';
+
+  el("app").innerHTML = h;
+  window.scrollTo(0,0);
+  el("btn-home").onclick = home;
+  el("btn-again").onclick = function(){
+    if(session.mode.indexOf("모의고사")>=0) startMock(session.kind);
+    else if(session.mode.indexOf("오답")>=0) startReview();
+    else if(session.mode.indexOf("장 연습")>=0) startChapter(session.qs[0].ch, session.qs.length);
+    else startPractice(session.qs[0].s, session.qs.length);
+  };
+  el("btn-export").onclick = function(){ exportNotes(wrongs.map(function(r){ return r.q.id; })); };
+}
+
+/* ---------- 오답노트 ---------- */
+function notes(){
+  stopTimer(); session = null;
+  var ids = Object.keys(store.wrong).filter(function(id){ return BY_ID[id]; });
+  ids.sort(function(a,b){
+    var d = store.wrong[b].count - store.wrong[a].count;
+    return d !== 0 ? d : a.localeCompare(b);
+  });
+  var h = '<header class="spread"><div class="stack"><div class="eyebrow">'+ids.length+'문항</div>'
+        + '<h1>오답노트</h1></div><div class="row">'
+        + '<button id="btn-export">내보내기(.md)</button><button id="btn-home">처음으로</button></div></header>';
+  h += '<div class="note">오답 다시 풀기에서 맞히면 목록에서 자동으로 빠집니다. '
+     + '메모는 이 브라우저에 저장됩니다.</div>';
+  if(!ids.length){
+    h += '<section class="card"><div class="note">아직 틀린 문제가 없습니다.</div></section>';
+  }
+  ids.forEach(function(id){
+    var q = BY_ID[id], w = store.wrong[id];
+    h += '<section class="card"><div class="row">'
+       + '<span class="tag">'+esc(chapterName(q.ch))+'</span><span class="tag">'+esc(q.topic)+'</span>'
+       + '<span class="tag">'+w.count+'번 틀림</span><span class="tag">'+esc(w.last||"")+'</span></div>';
+    h += '<div style="font-weight:500">'+esc(q.q)+'</div><div>';
+    for(var i=0;i<q.c.length;i++){
+      var cls = (i===q.a-1) ? "opt is-right" : "opt";
+      var after = (i===q.a-1) ? '<span class="after">정답</span>' : "";
+      h += '<div class="'+cls+'"><span class="num">'+CIRCLE[i]+'</span>'+esc(q.c[i])+after+'</div>';
+    }
+    h += '</div><div class="exp">'+esc(q.e)+'</div>';
+    h += '<textarea rows="2" data-note="'+esc(id)+'" placeholder="왜 틀렸는지 내 말로 적어두기">'
+       + esc(w.note||"")+'</textarea>';
+    h += '<div class="row"><button data-del="'+esc(id)+'">이 문제 지우기</button></div></section>';
+  });
+  el("app").innerHTML = h;
+  el("btn-home").onclick = home;
+  el("btn-export").onclick = function(){ exportNotes(ids); };
+  Array.prototype.forEach.call(document.querySelectorAll("[data-note]"), function(t){
+    t.onchange = function(){ store.wrong[t.dataset.note].note = t.value; save(); };
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("[data-del]"), function(b){
+    b.onclick = function(){ delete store.wrong[b.dataset.del]; save(); notes(); };
+  });
+}
+
+function exportNotes(ids){
+  ids = ids.filter(function(id){ return BY_ID[id]; });
+  var out = ["# 사진기능사 오답노트", "", "정리한 날짜: "+today(), "", "총 "+ids.length+"문항", ""];
+  var bySub = {};
+  ids.forEach(function(id){ (bySub[BY_ID[id].s] = bySub[BY_ID[id].s] || []).push(id); });
+  Object.keys(bySub).sort().forEach(function(sn){
+    out.push("## "+subjectName(parseInt(sn,10)));
+    out.push("");
+    bySub[sn].forEach(function(id){
+      var q = BY_ID[id], w = store.wrong[id] || {};
+      out.push("### ["+chapterName(q.ch)+" · "+q.topic+"] "+q.q);
+      out.push("");
+      q.c.forEach(function(c,i){ out.push("- "+CIRCLE[i]+" "+c+(i===q.a-1?"  **← 정답**":"")); });
+      out.push("");
+      out.push("> "+q.e);
+      out.push("");
+      if(w.count) out.push("- 틀린 횟수: "+w.count+"회 (마지막 "+(w.last||"")+")");
+      out.push("- 내 메모: "+(w.note ? w.note : ""));
+      out.push("- 문항번호: "+q.id);
+      out.push("");
+    });
+  });
+  download("사진기능사_오답노트.md", out.join("\n"));
+}
+
+/* ---------- 성적과 취약분야 ---------- */
+function stats(){
+  stopTimer(); session = null;
+  var mocks = store.history.filter(function(r){ return r.mode.indexOf("모의고사")>=0; });
+  var h = '<header class="spread"><div class="stack"><div class="eyebrow">기록</div>'
+        + '<h1>성적과 취약분야</h1></div><div class="row">'
+        + '<button id="btn-reset">기록 초기화</button><button id="btn-home">처음으로</button></div></header>';
+
+  h += '<section class="card"><h2>모의고사</h2>';
+  if(!mocks.length){
+    h += '<div class="note">아직 모의고사 기록이 없습니다.</div>';
+  }else{
+    var best = Math.max.apply(null, mocks.map(function(r){ return r.score; }));
+    var avg = Math.round(mocks.reduce(function(a,r){ return a+r.score; },0)/mocks.length);
+    h += '<div class="note">응시 '+mocks.length+'회 · 평균 '+avg+'점 · 최고 '+best+'점</div>';
+    h += '<div class="tablewrap"><table><tr><th>일시</th><th class="n">점수</th><th class="n">정답</th><th>판정</th></tr>';
+    mocks.slice().reverse().slice(0,15).forEach(function(r){
+      h += '<tr><td>'+esc(r.date)+'</td><td class="n">'+r.score+'</td>'
+         + '<td class="n">'+r.correct+'/'+r.total+'</td>'
+         + '<td class="'+(r.score>=PASS_MARK?"pass":"fail")+'">'
+         + (r.score>=PASS_MARK?"합격권":"불합격")+'</td></tr>';
+    });
+    h += '</table></div>';
+  }
+  h += '</section>';
+
+  var keys = Object.keys(store.topic).filter(function(k){ return store.topic[k].t >= 2; });
+  keys.sort(function(a,b){ return (store.topic[a].c/store.topic[a].t) - (store.topic[b].c/store.topic[b].t); });
+  h += '<section class="card"><div class="stack"><h2>분야별 정답률</h2>'
+     + '<div class="note">정답률이 낮은 분야부터 보여 줍니다. 위쪽부터 공략하세요</div></div>';
+  if(!keys.length){
+    h += '<div class="note">문제를 조금 더 풀면 분야별 정답률이 쌓입니다.</div>';
+  }else{
+    h += '<div class="tablewrap"><table><tr><th>분야</th><th class="n">정답률</th><th class="n">푼 문항</th></tr>';
+    keys.forEach(function(k){
+      var v = store.topic[k], p = Math.round(v.c/v.t*100);
+      h += '<tr><td>'+esc(k)+'</td><td class="n '+(p<60?"fail":(p>=80?"pass":""))+'">'+p+'%</td>'
+         + '<td class="n">'+v.t+'</td></tr>';
+    });
+    h += '</table></div>';
+  }
+  h += '</section>';
+
+  el("app").innerHTML = h;
+  el("btn-home").onclick = home;
+  el("btn-reset").onclick = function(){
+    ask({
+      title: "기록을 모두 지울까요?",
+      body: "오답노트, 점수 기록, 풀어 본 문항 표시가 전부 사라집니다. 되돌릴 수 없습니다.",
+      actions: [
+        {label:"모두 지우기", primary:true, act:function(){
+          store = {wrong:{}, history:[], topic:{}, seen:{}};
+          save(); clearSession(); stats();
+        }},
+        {label:"취소"}
+      ]
+    });
+  };
+}
+
+home();
+})();
+</script>
+</body>
+</html>
