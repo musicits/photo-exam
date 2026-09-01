@@ -127,6 +127,10 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .choice.wrong{border-color:var(--bad);background:var(--bad-soft)}
 .choice.wrong .num{color:var(--bad)}
 .exp{border-left:2px solid var(--accent);padding:2px 0 2px 13px;color:var(--ink-dim);font-size:14.5px}
+.why{display:block;margin-top:5px;font-size:13.5px;line-height:1.55;color:var(--ink-dim)}
+.choice.right .why{color:var(--ok)}
+.choice.wrong .why{color:var(--bad)}
+.opt .why{margin-left:26px}
 .exp b{color:var(--ink)}
 
 /* 문항 이동 - 컨택트시트 프레임 */
@@ -529,7 +533,9 @@ function quiz(){
       if(i === q.a-1) cls += " right";
       else if(i === picked) cls += " wrong";
     }else if(picked === i){ cls += " sel"; }
-    h += '<button class="'+cls+'" data-pick="'+i+'"><span class="num">'+CIRCLE[i]+'</span><span>'+esc(q.c[i])+'</span></button>';
+    var why = (revealed && q.w) ? '<span class="why">'+esc(q.w[i])+'</span>' : '';
+    h += '<button class="'+cls+'" data-pick="'+i+'"><span class="num">'+CIRCLE[i]+'</span>'
+       + '<span>'+esc(q.c[i])+why+'</span></button>';
   }
   h += '</div>';
   if(revealed){
@@ -705,7 +711,8 @@ function result(res, correct, score, perSub, perTopic){
         var after = "";
         if(i === q.a-1){ cls += " is-right"; after = '<span class="after">정답</span>'; }
         else if(i === r.picked){ cls += " is-picked"; after = '<span class="after">내가 고른 답</span>'; }
-        h += '<div class="'+cls+'"><span class="num">'+CIRCLE[i]+'</span>'+esc(q.c[i])+after+'</div>';
+        h += '<div class="'+cls+'"><span class="num">'+CIRCLE[i]+'</span>'+esc(q.c[i])+after
+           + (q.w ? '<span class="why">'+esc(q.w[i])+'</span>' : '')+'</div>';
       }
       h += '</div>';
       if(r.picked === undefined) h += '<div class="note">답을 고르지 않았습니다.</div>';
@@ -755,7 +762,8 @@ function notes(){
     for(var i=0;i<q.c.length;i++){
       var cls = (i===q.a-1) ? "opt is-right" : "opt";
       var after = (i===q.a-1) ? '<span class="after">정답</span>' : "";
-      h += '<div class="'+cls+'"><span class="num">'+CIRCLE[i]+'</span>'+esc(q.c[i])+after+'</div>';
+      h += '<div class="'+cls+'"><span class="num">'+CIRCLE[i]+'</span>'+esc(q.c[i])+after
+         + (q.w ? '<span class="why">'+esc(q.w[i])+'</span>' : '')+'</div>';
     }
     h += '</div><div class="exp">'+esc(q.e)+'</div>';
     h += '<textarea rows="2" data-note="'+esc(id)+'" placeholder="왜 틀렸는지 내 말로 적어두기">'
@@ -791,7 +799,10 @@ function exportNotes(ids){
       var q = BY_ID[id], w = store.wrong[id] || {};
       out.push("### ["+chapterName(q.ch)+" · "+q.topic+"] "+q.q);
       out.push("");
-      q.c.forEach(function(c,i){ out.push("- "+CIRCLE[i]+" "+c+(i===q.a-1?"  **← 정답**":"")); });
+      q.c.forEach(function(c,i){
+        out.push("- "+CIRCLE[i]+" "+c+(i===q.a-1?"  **← 정답**":""));
+        if(q.w) out.push("    - "+q.w[i]);
+      });
       out.push("");
       out.push("> "+q.e);
       out.push("");

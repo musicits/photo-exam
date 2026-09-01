@@ -75,6 +75,20 @@ def test_모든_단원이_고르게_채워져_있다(bank, questions):
         assert n >= 15, f"{no}장 문항이 {n}개뿐이다"
 
 
+def test_선지별_해설이_보기와_짝이_맞는다(questions):
+    """build.py 가 보기를 회전시킬 때 선지별 해설도 같이 돌려야 한다."""
+    annotated = [q for q in questions if q.get("w")]
+    assert annotated, "선지별 해설이 하나도 없다"
+    for q in annotated:
+        assert len(q["w"]) == 4, q["id"]
+        assert all(w.strip() for w in q["w"]), q["id"]
+        정답풀이 = q["w"][q["a"] - 1]
+        assert 정답풀이.startswith("맞다"), f'{q["id"]}: 정답 자리의 풀이가 어긋났다'
+        for i, w in enumerate(q["w"]):
+            if i != q["a"] - 1:
+                assert w.startswith("아니다"), f'{q["id"]}: {i+1}번 풀이가 어긋났다'
+
+
 def test_웹페이지에_문제가_박혀_있다(bank):
     """build.py 가 quiz-template.html 에 데이터를 넣어 한 파일로 만든다."""
     page = (EXAM / "index.html").read_text(encoding="utf-8")

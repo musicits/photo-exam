@@ -50,16 +50,22 @@ TOPIC_CHAPTER = {
 }
 
 
-def rotate(choices, answer_idx, r):
-    """보기를 오른쪽으로 r 칸 회전시키고 옮겨진 정답 위치를 돌려준다."""
-    n = len(choices)
+def rotate(items, r):
+    """리스트를 오른쪽으로 r 칸 회전시킨다."""
+    n = len(items)
     r %= n
-    new = choices[-r:] + choices[:-r] if r else list(choices)
-    return new, (answer_idx + r) % n
+    return items[-r:] + items[:-r] if r else list(items)
+
+
+def load_why():
+    """선지별 해설. parts 파일에 적힌 보기 순서대로 네 개를 적어 둔다."""
+    path = PARTS / "why.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
 
 
 def main():
     DATA.mkdir(exist_ok=True)
+    why = load_why()
     subjects = []
     total = 0
     for num, (name, part_names) in SUBJECTS.items():
@@ -75,9 +81,12 @@ def main():
             assert len(q["c"]) == 4, q["id"]
             assert q["topic"] in TOPIC_CHAPTER, f'{q["id"]}: 분야 "{q["topic"]}" 의 단원이 정해지지 않았다'
             r = (target - (q["a"] - 1)) % 4
-            new_choices, new_idx = rotate(q["c"], q["a"] - 1, r)
-            q["c"] = new_choices
-            q["a"] = new_idx + 1
+            note = why.get(q["id"])
+            if note:
+                assert len(note) == 4, f'{q["id"]}: 선지별 해설은 네 개여야 한다'
+                q["w"] = rotate(note, r)
+            q["c"] = rotate(q["c"], r)
+            q["a"] = ((q["a"] - 1) + r) % 4 + 1
             q["s"] = num
             q["ch"] = TOPIC_CHAPTER[q["topic"]]
 
@@ -136,6 +145,10 @@ def dump(path, heading, questions, circled):
     for i, q in enumerate(questions, 1):
         lines += [f'### {i}. {q["q"]}', ""]
         lines += [f"- {circled[j]} {c}" for j, c in enumerate(q["c"])]
+        if q.get("w"):
+            lines += ["", "<details><summary>보기별 풀이</summary>", ""]
+            lines += [f'- {circled[j]} {w}' for j, w in enumerate(q["w"])]
+            lines += ["", "</details>"]
         lines += ["", "<details><summary>정답 보기</summary>", "",
                   f'**정답 {circled[q["a"]-1]}**  ·  {q["ch"]}장 {CHAPTERS[q["ch"]]}'
                   f'  ·  분야: {q["topic"]}  ·  문항번호: {q["id"]}', "",
@@ -144,7 +157,8 @@ def dump(path, heading, questions, circled):
 
 
 def report(payload):
-    print(f'총 {payload["total"]}문항')
+    withwhy = sum(1 for sub in payload["subjects"] for q in sub["questions"] if q.get("w"))
+    print(f'총 {payload["total"]}문항 (선지별 해설 {withwhy}문항)')
     seen_id, seen_q = set(), set()
     chapters = {}
     for sub in payload["subjects"]:
