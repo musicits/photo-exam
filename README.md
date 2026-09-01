@@ -93,7 +93,8 @@ python3 -m pytest tests -q
 `index.html`, `data/questions.json`, `문제은행*.md`, `단원_*.md` 는 자동 생성물이니
 직접 고치지 마세요. 고칠 곳은 `parts/*.json` 과 `quiz-template.html` 입니다.
 
-`main` 에 푸시하면 GitHub Actions 가 Pages 로 자동 배포합니다.
+`main` 브랜치의 `index.html` 이 그대로 GitHub Pages 로 서비스됩니다.
+푸시하면 1분쯤 뒤에 반영됩니다.
 
 ---
 
