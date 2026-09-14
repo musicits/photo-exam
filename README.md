@@ -5,7 +5,7 @@
 
 ## 바로 풀기
 
-### 👉 <https://musicits.github.io/photo-exam/>
+### 👉 <https://tools.musicits.com/photo-exam/>
 
 휴대폰에서도 그대로 됩니다. 설치도 회원가입도 필요 없습니다.
 풀이 기록은 서버가 아니라 **각자의 브라우저 안에만** 저장됩니다.
