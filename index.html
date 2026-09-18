@@ -9,10 +9,11 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
 /* music ITs 도구 공통 토큰. 코덱 매치·폰 목업·매거진과 같은 값이다.
-   여기만 파랑(--main 계열)을 쓰는 이유는, 초록을 '정답' 표시에 쓰기 때문이다. */
+   여기만 청록을 쓰는 이유는, 초록은 '정답' 표시에 쓰고
+   파랑·에메랄드·앰버는 코덱 매치가 기기 브랜드에 따라 쓰기 때문이다. */
 :root{
-  --main:#2563EB; --main-deep:#1D4ED8;
-  --pool-a:#A9C1FF; --pool-b:#93E1FF;
+  --main:#0E7C8A; --main-deep:#0A5F6B;
+  --pool-a:#9FDCE5; --pool-b:#BBD9F2;
   --ground:#F7F8FA;        /* 바탕 */
   --surface:#ffffff;       /* 카드 */
   --raised:#ffffff;        /* 단추·입력칸 */
@@ -43,8 +44,8 @@
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --main:#7DA2FF; --main-deep:#B8CBFF;
-    --pool-a:#2A4A9A; --pool-b:#1F5F7F;
+    --main:#4FB3C4; --main-deep:#8FD8E4;
+    --pool-a:#134E58; --pool-b:#1F4A63;
     --ground:#0B0D11; --surface:#161920; --raised:#1D2129;
     --line:#2A2F38; --line-soft:#23272F;
     --ink:#ECEEF2; --ink-dim:#9199A6;
@@ -62,8 +63,8 @@
   }
 }
 :root[data-theme="dark"]{
-  --main:#7DA2FF; --main-deep:#B8CBFF;
-  --pool-a:#2A4A9A; --pool-b:#1F5F7F;
+  --main:#4FB3C4; --main-deep:#8FD8E4;
+  --pool-a:#134E58; --pool-b:#1F4A63;
   --ground:#0B0D11; --surface:#161920; --raised:#1D2129;
   --line:#2A2F38; --line-soft:#23272F;
   --ink:#ECEEF2; --ink-dim:#9199A6;
@@ -644,7 +645,7 @@ function quiz(){
   h += '<span class="note keyhint">키보드 1~4 로 답 선택, ← → 로 이동</span></div>';
 
   h += '<section class="card"><div class="stack"><h2>문항 이동</h2>'
-     + '<div class="note">푼 문항은 파랑, 표시해 둔 문항은 앰버로 나타납니다</div></div>'
+     + '<div class="note">푼 문항은 청록, 표시해 둔 문항은 앰버로 나타납니다</div></div>'
      + '<div class="sheet" id="nav"></div></section>';
   el("app").innerHTML = h;
 
