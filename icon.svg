@@ -1,11 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <!-- music ITs 도구 공통 아이콘. 탭에 16px 로 줄어들어도 읽히도록
-       가로로 긴 로고 대신 네모 안에 굵은 막대 넷을 넣습니다. -->
+  <!-- music ITs — 사진기능사 문제은행. 도구 모음 카드와 같은 그림입니다. -->
   <rect width="64" height="64" rx="15" fill="#0B0D11"/>
-  <g fill="#fff">
-    <rect x="14" y="27" width="6" height="10" rx="3"/>
-    <rect x="24" y="19" width="6" height="26" rx="3"/>
-    <rect x="34" y="14" width="6" height="36" rx="3"/>
-    <rect x="44" y="24" width="6" height="16" rx="3"/>
+  <g transform="translate(8 8) scale(2)" fill="none" stroke="#fff" stroke-width="2"
+     stroke-linecap="round" stroke-linejoin="round">
+    <rect x="4.5" y="3.5" width="15" height="17" rx="2.5"/><path d="M9 3.5V2h6v1.5"/><path d="m8.5 11.5 2 2 4.5-4.5"/>
   </g>
 </svg>
