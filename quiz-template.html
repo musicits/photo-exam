@@ -155,7 +155,7 @@ button:disabled{opacity:.42;cursor:default}
 button:disabled:hover{border-color:var(--line)}
 select{font:inherit;font-family:var(--sans);padding:8px 10px;border-radius:var(--r-md);
   border:1px solid var(--line);background:var(--raised);color:var(--ink)}
-textarea{width:100%;font:inherit;font-family:var(--sans);font-size:14px;padding:9px 10px;
+input[type=text],input:not([type]){font:inherit;font-family:var(--sans);padding:9px 11px;\n  border-radius:var(--r-md);border:1px solid var(--line);background:var(--raised);color:var(--ink);width:100%}\ninput:focus-visible{outline:2px solid var(--accent);outline-offset:1px}\ntextarea{width:100%;font:inherit;font-family:var(--sans);font-size:14px;padding:9px 10px;
   border-radius:var(--r-md);border:1px solid var(--line);background:var(--raised);color:var(--ink);resize:vertical}
 textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
@@ -515,6 +515,7 @@ function home(){
      + '<div class="row"><button id="btn-review" '+(wrongCount?'':'disabled')+'>오답만 풀기</button>'
      + '<button id="btn-notes">오답노트</button>'
      + '<button id="btn-import">.md 불러오기</button>'
+     + '<button id="btn-sync">기기 잇기'+(syncInfo()?' · '+syncInfo().code:'')+'</button>'
      + '<button id="btn-stats">성적과 취약분야</button></div></section>';
 
   if(mocks.length){
@@ -551,6 +552,7 @@ function home(){
   el("btn-review").onclick = startReview;
   el("btn-notes").onclick = notes;
   el("btn-import").onclick = pickMarkdownFile;
+  el("btn-sync").onclick = syncPanel;
   el("btn-stats").onclick = stats;
 }
 
@@ -827,6 +829,184 @@ function result(res, correct, score, perSub, perTopic){
     else startPractice(session.qs[0].s, session.qs.length);
   };
   el("btn-export").onclick = function(){ exportNotes(wrongs.map(function(r){ return r.q.id; })); };
+}
+
+/* ---------- 기기 잇기 ----------
+   폰·PC·맥이 같은 기록을 보게 한다. 코드 여섯 자와 열쇠 열 자가 전부이고
+   이름도 메일도 받지 않는다. 30일 동안 아무도 안 열면 저절로 지워진다. */
+var SYNC_API = "https://sync.musicits.com";
+var KEY_SYNC = "photo-exam-sync-v1";
+
+function syncInfo(){
+  try{
+    var raw = localStorage.getItem(KEY_SYNC);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+function syncSave(info){
+  try{
+    if(info) localStorage.setItem(KEY_SYNC, JSON.stringify(info));
+    else localStorage.removeItem(KEY_SYNC);
+  }catch(e){}
+}
+
+/* 받아온 기록을 지금 기기 기록과 합친다. 지우지 않고 더하는 쪽으로만 간다. */
+function syncMerge(remote){
+  if(!remote || typeof remote !== "object") return;
+  Object.keys(remote.wrong||{}).forEach(function(id){
+    var mine = store.wrong[id], theirs = remote.wrong[id] || {};
+    if(!mine){ store.wrong[id] = {count: theirs.count||1, note: theirs.note||""}; return; }
+    mine.count = Math.max(mine.count||0, theirs.count||0);
+    if(!mine.note && theirs.note) mine.note = theirs.note;
+    else if(mine.note && theirs.note && mine.note !== theirs.note && mine.note.indexOf(theirs.note) < 0)
+      mine.note = mine.note + "\n" + theirs.note;      // 양쪽 메모를 다 남긴다
+  });
+  Object.keys(remote.seen||{}).forEach(function(id){ store.seen[id] = 1; });
+  Object.keys(remote.imported||{}).forEach(function(id){
+    if(!store.imported[id]){ store.imported[id] = remote.imported[id]; BY_ID[id] = remote.imported[id]; }
+  });
+  var seenLine = {};
+  (store.history||[]).concat(remote.history||[]).forEach(function(r){
+    seenLine[JSON.stringify(r)] = r;                     // 같은 회차가 두 번 쌓이지 않게
+  });
+  store.history = Object.keys(seenLine).map(function(k){ return seenLine[k]; })
+    .sort(function(a,b){ return (a.at||"") < (b.at||"") ? -1 : 1; });
+  save();
+}
+
+function syncBody(){
+  return JSON.stringify({
+    wrong: store.wrong, seen: store.seen, history: store.history,
+    topic: store.topic, imported: store.imported
+  });
+}
+
+function syncPut(info, done){
+  fetch(SYNC_API + "/s/" + info.code, {
+    method: "PUT",
+    headers: {"content-type":"application/json", "x-key": info.key},
+    body: syncBody()
+  }).then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
+    .then(function(res){
+      if(!res.ok) return done(res.j.error || "올리지 못했습니다.");
+      done(null);
+    })
+    .catch(function(){ done("인터넷에 닿지 못했습니다."); });
+}
+
+function syncGet(code, done){
+  fetch(SYNC_API + "/s/" + code)
+    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
+    .then(function(res){
+      if(!res.ok) return done(res.j.error || "받지 못했습니다.");
+      done(null, res.j.data);
+    })
+    .catch(function(){ done("인터넷에 닿지 못했습니다."); });
+}
+
+function syncPanel(){
+  var info = syncInfo();
+  if(!info){
+    ask({
+      title: "기기 잇기",
+      body: "폰에서 풀던 오답노트를 PC 에서 이어 풀 수 있습니다. "
+          + "이 기기에서 <b>코드를 새로 만들거나</b>, 다른 기기에서 만든 코드를 <b>넣으면</b> 됩니다.",
+      actions: [
+        {label:"코드 만들기", primary:true, act: syncNew},
+        {label:"코드 넣기", act: syncEnter},
+        {label:"닫기"}
+      ]
+    });
+    return;
+  }
+  ask({
+    title: "기기 잇기",
+    body: "코드 <b>"+esc(info.code)+"</b> · 열쇠 <b>"+esc(info.key)+"</b><br>"
+        + "다른 기기에서 이 둘을 넣으면 같은 기록을 봅니다."
+        + (info.at ? "<br>마지막으로 올린 때 " + esc(info.at) : ""),
+    actions: [
+      {label:"올리기", primary:true, act: syncUp},
+      {label:"받기", act: function(){ syncDown(info.code); }},
+      {label:"끊기", act: function(){
+        ask({title:"이 기기에서 끊을까요?",
+             body:"코드 자체는 남습니다. 이 기기만 더 이상 주고받지 않습니다.",
+             actions:[{label:"끊기", primary:true, act:function(){ syncSave(null); home(); }}, {label:"그만두기"}]});
+      }},
+      {label:"닫기"}
+    ]
+  });
+}
+
+function syncNew(){
+  tell("코드를 만드는 중입니다", "잠시만요.");
+  fetch(SYNC_API + "/new", {method:"POST"})
+    .then(function(r){ return r.json().then(function(j){ return {ok:r.ok, j:j}; }); })
+    .then(function(res){
+      if(!res.ok) return tell("만들지 못했습니다", esc(res.j.error||""));
+      var info = {code: res.j.code, key: res.j.key, at: ""};
+      syncPut(info, function(err){
+        if(err) return tell("올리지 못했습니다", esc(err));
+        info.at = today();
+        syncSave(info);
+        tell("코드 " + info.code, "열쇠는 <b>"+esc(info.key)+"</b> 입니다. 다른 기기에서 이 둘을 넣으세요.", home);
+      });
+    })
+    .catch(function(){ tell("인터넷에 닿지 못했습니다", "잠시 뒤 다시 눌러 주세요."); });
+}
+
+function syncEnter(){
+  closeModal();
+  var ov = document.createElement("div");
+  ov.className = "overlay";
+  ov.innerHTML = '<div class="modal" role="dialog" aria-modal="true">'
+    + '<h2>코드 넣기</h2>'
+    + '<div class="note">다른 기기의 [기기 잇기] 에 적힌 코드와 열쇠를 그대로 넣으세요.</div>'
+    + '<div class="stack"><label class="note" for="sync-code">코드 (6자)</label>'
+    + '<input id="sync-code" maxlength="6" autocapitalize="characters" spellcheck="false"></div>'
+    + '<div class="stack"><label class="note" for="sync-key">열쇠 (10자)</label>'
+    + '<input id="sync-key" maxlength="10" spellcheck="false"></div>'
+    + '<div class="actions"><button class="primary" id="sync-ok">잇기</button>'
+    + '<button id="sync-cancel">그만두기</button></div></div>';
+  ov.onclick = function(e){ if(e.target === ov) closeModal(); };
+  document.body.appendChild(ov);
+  el("sync-code").focus();
+  el("sync-cancel").onclick = closeModal;
+  el("sync-ok").onclick = function(){
+    var code = (el("sync-code").value||"").trim().toUpperCase();
+    var key  = (el("sync-key").value||"").trim();
+    if(code.length !== 6 || key.length !== 10) return tell("다시 확인해 주세요", "코드는 6자, 열쇠는 10자입니다.");
+    closeModal();
+    syncGet(code, function(err, data){
+      if(err) return tell("잇지 못했습니다", esc(err));
+      syncMerge(data);
+      var info = {code: code, key: key, at: today()};
+      syncPut(info, function(err2){
+        if(err2){ syncSave(null); return tell("열쇠가 맞지 않습니다", "기록은 받아 두었습니다. 올리려면 열쇠를 다시 확인해 주세요.", home); }
+        syncSave(info);
+        tell("이었습니다", "이제 이 기기와 저 기기가 같은 기록을 봅니다.", home);
+      });
+    });
+  };
+}
+
+function syncUp(){
+  var info = syncInfo();
+  if(!info) return;
+  tell("올리는 중입니다", "잠시만요.");
+  syncPut(info, function(err){
+    if(err) return tell("올리지 못했습니다", esc(err));
+    info.at = today(); syncSave(info);
+    tell("올렸습니다", "다른 기기에서 [받기] 를 누르면 따라옵니다.", home);
+  });
+}
+
+function syncDown(code){
+  tell("받는 중입니다", "잠시만요.");
+  syncGet(code, function(err, data){
+    if(err) return tell("받지 못했습니다", esc(err));
+    syncMerge(data);
+    tell("받았습니다", "지금 기기 기록과 합쳤습니다. 지워진 것은 없습니다.", home);
+  });
 }
 
 /* ---------- 오답노트 ---------- */

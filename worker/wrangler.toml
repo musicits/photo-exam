@@ -1,0 +1,14 @@
+# 오답노트를 기기 사이에서 주고받는 아주 작은 서버.
+# 저장하는 것은 문제 풀이 기록뿐이고, 이름·메일 같은 것은 받지 않는다.
+name = "photo-exam-sync"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# 배포 뒤 이 주소로 열린다. tools.musicits.com 은 건드리지 않는다.
+routes = [
+  { pattern = "sync.musicits.com", custom_domain = true }
+]
+
+[[kv_namespaces]]
+binding = "NOTES"
+id = "여기에_KV_네임스페이스_ID"
