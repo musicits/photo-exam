@@ -200,7 +200,8 @@ textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 
 /* 문항 이동 - 컨택트시트 프레임 */
 .sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:4px}
-.sheet button{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;padding:7px 0;text-align:center;
+.sheet button{font-size:12.5px;font-weight:600;font-variant-numeric:tabular-nums;
+  min-height:44px;padding:0;display:grid;place-items:center;
   border-radius:var(--r-sm);color:var(--ink-dim)}
 .sheet button.done{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
 .sheet button.flag{background:var(--mark-soft);border-color:var(--mark);color:var(--mark)}
